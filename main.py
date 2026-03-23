@@ -9,7 +9,7 @@ import os
 # --- RENDER UPTIME SERVER ---
 app = Flask('')
 @app.route('/')
-def home(): return "🔥 FLAME PRO V22.5 IS ONLINE!"
+def home(): return "🔥ARABIC CPM TOOL!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -43,7 +43,7 @@ def start(message):
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, one_time_keyboard=True)
     markup.add('CPM1', 'CPM2')
     
-    msg = bot.send_message(cid, "🔥 **FLAME PRO V22.5**\n\nSelect Version to Continue:", 
+    msg = bot.send_message(cid, "🔥 **الـخـمـعـلـي🇸🇦. + O6Z🧑‍💻**\n\nSelect Version to Continue:", 
                            reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text in ['CPM1', 'CPM2'])
