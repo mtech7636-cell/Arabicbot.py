@@ -16,7 +16,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 # --- CONFIG ---
-TOKEN = "8314787817:AAHpZnchNnDOaLARhaVU6eNLGbyDuyjz-n0"
+TOKEN = "8407532602:AAGWNZxeHKoVi265rrv2jB-r6EYFEnX-Ds0"
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=20)
 
 # നിങ്ങളുടെ ടെലിഗ്രാം ഐഡി (അലർട്ടുകൾ ലഭിക്കാൻ)
