@@ -43,7 +43,7 @@ def start(message):
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, one_time_keyboard=True)
     markup.add('CPM1', 'CPM2')
     
-    msg = bot.send_message(cid, "🔥 **الـخـمـعـلـي🇸🇦. + O6Z🧑‍💻**\n\nSelect Version to Continue:", 
+    msg = bot.send_message(cid, "🔥 **الـخـمـعـلـي🇸🇦. + O6Z🧑‍💻**\n\nاختر الإصدار للمتابعة:", 
                            reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text in ['CPM1', 'CPM2'])
@@ -51,7 +51,7 @@ def set_version(message):
     cid = message.chat.id
     user_sessions[cid] = {'v': message.text, 'info': get_user_info(message)}
     
-    msg = bot.send_message(cid, f"✅ Selected: **{message.text}**\n\n📧 Enter Your Email:", 
+    msg = bot.send_message(cid, f"✅ Selected: **{message.text}**\n\n📧 :", 
                            reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
     bot.register_next_step_handler(msg, get_email)
 
