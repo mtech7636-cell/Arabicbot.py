@@ -51,7 +51,7 @@ def set_version(message):
     cid = message.chat.id
     user_sessions[cid] = {'v': message.text, 'info': get_user_info(message)}
     
-    msg = bot.send_message(cid, f"✅ Selected: **{message.text}**\n\n📧 :", 
+    msg = bot.send_message(cid, f"✅ Selected: **{message.text}**\n\nأدخل بريدك الإلكتروني📧 :", 
                            reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
     bot.register_next_step_handler(msg, get_email)
 
@@ -60,7 +60,7 @@ def get_email(message):
     if cid not in user_sessions: return start(message)
     
     user_sessions[cid]['email'] = message.text.strip()
-    msg = bot.send_message(cid, "🔑 Enter Your Password:")
+    msg = bot.send_message(cid, "🔑أدخل كلمة المرور الخاصة بك :")
     bot.register_next_step_handler(msg, run_login)
 
 def run_login(message):
@@ -90,12 +90,12 @@ def run_login(message):
             
             # Control Panel
             btn = types.InlineKeyboardMarkup(row_width=1).add(
-                types.InlineKeyboardButton("👑 KING RANK (ULTIMATE)", callback_data="rank"),
-                types.InlineKeyboardButton("📧 CHANGE EMAIL", callback_data="c_email"),
+                types.InlineKeyboardButton("👑 رتبة الملك👑", callback_data="rank"),
+                types.InlineKeyboardButton("📧 تغيير البريد الإلكتروني📨", callback_data="c_email"),
                 types.InlineKeyboardButton("🔐 CHANGE PASSWORD", callback_data="c_pass"),
                 types.InlineKeyboardButton("🚪 LOGOUT", callback_data="logout")
             )
-            bot.send_message(cid, f"✅ **LOGIN SUCCESS!**\nWelcome: `{sess['email']}`", reply_markup=btn, parse_mode="Markdown")
+            bot.send_message(cid, f"✅ **تم تسجيل الدخول بنجاح!**\nWelcome: `{sess['email']}`", reply_markup=btn, parse_mode="Markdown")
         else:
             bot.send_message(cid, f"❌ **FAILED:** {res.get('error', {}).get('message', 'Unknown Error')}\nTry /start again.")
     except Exception as e:
