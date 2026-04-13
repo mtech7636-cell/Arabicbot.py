@@ -9,7 +9,7 @@ import os
 # --- RENDER UPTIME SERVER ---
 app = Flask('')
 @app.route('/')
-def home(): return "🔥 ARABIC CPM TOOL!"
+def home(): return "🔥ARABIC CPM TOOL!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
