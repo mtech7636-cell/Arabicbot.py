@@ -6,10 +6,10 @@ from threading import Thread
 from flask import Flask
 import os
 
-# --- RENDER UPTIME SERVER ---
+# --- RENDER UPTIME SERVER --_
 app = Flask('')
 @app.route('/')
-def home(): return "🔥ARABIC CPM TOOL!"
+def home(): return "ARABIC CPM TOOL!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
