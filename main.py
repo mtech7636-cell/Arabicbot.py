@@ -4,7 +4,7 @@ import requests
 import json
 
 # --- CONFIG ---
-TOKEN = '8542467216:AAG_S6R4YMswzKHRWJxOtCCj0A059bf3BpE'
+TOKEN = '8542467216:AAFVNntD1OGADt1koMtT8c0CXo0bIFaGjEY'
 ADMIN_ID = '5475305604'
 bot = telebot.TeleBot(TOKEN)
 
