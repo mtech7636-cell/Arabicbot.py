@@ -3,7 +3,6 @@ from telebot import types
 import requests
 import json
 
-
 # --- CONFIG ---
 TOKEN = '8542467216:AAG_S6R4YMswzKHRWJxOtCCj0A059bf3BpE'
 ADMIN_ID = '5475305604'
