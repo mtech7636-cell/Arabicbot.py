@@ -18,7 +18,7 @@ def run_flask():
 
 # --- CONFIG ---
 TOKEN = '8542467216:AAFVNntD1OGADt1koMtT8c0CXo0bIFaGjEY'
-ADMIN_ID = '5475305604'
+ADMIN_ID = '7212602902'
 bot = telebot.TeleBot(TOKEN)
 
 # API ENDPOINTS (Updated to v1 for stability)
