@@ -10,7 +10,7 @@ import re
 # --- SERVER ---
 app = Flask('')
 @app.route('/')
-def home(): return "🔥CPMEGYTURBO v3.0 IS ACTIVE!"
+def home(): return "🔥CPMEGY TURBO v3.0 IS ACTIVE!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
